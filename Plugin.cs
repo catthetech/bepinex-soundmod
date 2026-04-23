@@ -10,9 +10,13 @@ using UnityEngine.Networking;
 
 namespace bepinex_soundmod
 {
-    [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
+    [BepInPlugin(PLUGIN_GUID, PLUGIN_NAME, PLUGIN_VERSION)]
     public class Plugin : BaseUnityPlugin
     {
+        private const string PLUGIN_GUID = "bepinex-soundmod";
+        private const string PLUGIN_NAME = "BepInEx SoundMod";
+        private const string PLUGIN_VERSION = "1.0.0";
+
         internal static new ManualLogSource Logger;
 
         public static readonly Dictionary<string, AudioClip> replacedClips = [];
@@ -21,7 +25,7 @@ namespace bepinex_soundmod
         {
             // Plugin startup logic
             Logger = base.Logger;
-            Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
+            Logger.LogInfo($"Plugin {PLUGIN_NAME} is loaded!");
 
             string soundsPath = Path.Combine(Path.GetDirectoryName(Info.Location), "sounds");
             Logger.LogInfo($"Sounds path: \"{soundsPath}\"");
@@ -59,6 +63,7 @@ namespace bepinex_soundmod
             [HarmonyPatch(nameof(AudioSource.Play), [typeof(ulong)])]
             [HarmonyPrefix]
             public static void Play_UlongPatch(AudioSource __instance) => ReplaceClip(__instance);
+            /*
             [HarmonyPatch(nameof(AudioSource.Play), [typeof(double)])]
             [HarmonyPrefix]
             public static void Play_DoublePatch(AudioSource __instance) => ReplaceClip(__instance);
@@ -68,6 +73,7 @@ namespace bepinex_soundmod
             [HarmonyPatch(nameof(AudioSource.PlayOneShotHelper), [typeof(AudioSource), typeof(AudioClip), typeof(float)])]
             [HarmonyPrefix]
             public static void PlayOneShotHelper_Patch(AudioSource source, ref AudioClip clip, float volumeScale) => clip = ReplaceClip(clip, source);
+            */
             public static void ReplaceClip(AudioSource source) => source.clip = ReplaceClip(source.clip, source);
             public static AudioClip ReplaceClip(AudioClip clip, AudioSource source)
             {
@@ -101,15 +107,20 @@ namespace bepinex_soundmod
                     break;
             }
 
-            using (UnityWebRequest uwr = UnityWebRequestMultimedia.GetAudioClip(path, type))
+            using (UnityWebRequest uwr = UnityWebRequestMultimedia.GetAudioClip($"file://{path.Replace("\\", "/")}", type))
             {
                 uwr.SendWebRequest();
 
                 try
                 {
                     while (!uwr.isDone) { };
+#if UNITY_2020_3_OR_NEWER
+                    if (uwr.result == UnityWebRequest.Result.Success)
+#else
+                    if(uwr.error == null || uwr.error.Trim().Length == 0)
+#endif
+                        return DownloadHandlerAudioClip.GetContent(uwr);
 
-                    if (uwr.result == UnityWebRequest.Result.Success) return DownloadHandlerAudioClip.GetContent(uwr);
                     else Logger.LogWarning($"Failed to load clip: {uwr.error}");
                 }
                 catch (Exception err)
