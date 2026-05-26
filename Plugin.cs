@@ -67,9 +67,14 @@ namespace bepinex_soundmod
             [HarmonyPatch(nameof(AudioSource.Play), [typeof(double)])]
             [HarmonyPrefix]
             public static void Play_DoublePatch(AudioSource __instance) => ReplaceClip(__instance);
+            */
             [HarmonyPatch(nameof(AudioSource.PlayDelayed), [typeof(float)])]
             [HarmonyPrefix]
             public static void PlayDelayed_Patch(AudioSource __instance) => ReplaceClip(__instance);
+            [HarmonyPatch(nameof(AudioSource.PlayOneShot), [typeof(AudioClip), typeof(float)])]
+            [HarmonyPrefix]
+            public static void PlayOneShotPatch(AudioSource __instance, ref AudioClip clip, float volumeScale) => clip = ReplaceClip(clip, __instance);
+            /*
             [HarmonyPatch(nameof(AudioSource.PlayOneShotHelper), [typeof(AudioSource), typeof(AudioClip), typeof(float)])]
             [HarmonyPrefix]
             public static void PlayOneShotHelper_Patch(AudioSource source, ref AudioClip clip, float volumeScale) => clip = ReplaceClip(clip, source);
@@ -77,8 +82,12 @@ namespace bepinex_soundmod
             public static void ReplaceClip(AudioSource source) => source.clip = ReplaceClip(source.clip, source);
             public static AudioClip ReplaceClip(AudioClip clip, AudioSource source)
             {
-                Logger.LogDebug($"Audio \"{(clip == null ? "unk" : clip.name)}\", source \"{(source == null ? "unk" : source.name)}\", replaced: {replacedClips.ContainsKey(clip.name)}");
-                if (replacedClips.ContainsKey(clip.name)) return replacedClips[clip.name];
+                if (clip == null) {
+                    Logger.LogWarning($"clip is null");
+                } else {
+                    Logger.LogDebug($"Audio \"{(clip == null ? "unk" : clip.name)}\", source \"{(source == null ? "unk" : source.name)}\", replaced: {replacedClips.ContainsKey(clip.name)}");
+                    if (replacedClips.ContainsKey(clip.name)) return replacedClips[clip.name];
+                }
                 return clip;
             }
         }
